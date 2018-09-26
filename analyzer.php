@@ -35,12 +35,15 @@
 		private function getSources($array){
 			$temp = array();
 			foreach ($array as $arr) {
-				array_push(
-					$temp, 
-					array(
-						"source" => $arr->getAttribute('src')
-					)
-				);
+				$src = $arr->getAttribute('src');
+				if (isset($src) && $src !== "") {
+					array_push(
+						$temp, 
+						array(
+							"source" => $arr->getAttribute('src')
+						)
+					);	
+				}
 			}
 
 			return $temp;
