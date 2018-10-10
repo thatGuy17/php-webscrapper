@@ -113,7 +113,7 @@
 				array_push($results, $elements);
 			}
 
-			return json_encode($results);
+			return $results;
 		}
 	}
 ?>
