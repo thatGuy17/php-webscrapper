@@ -7,19 +7,23 @@
 		private $_xpath;
 
 		/**
-		 * Constructor requires on variable of type xpath
+		 * Constructor requires on variable of type xpath or an array with xpath values
 		*/
 		function __construct($xpath){
-			$this->_xpath = $xpath;
+			unset($this->_xpath);
+			$this->_xpath = array();
+			(is_array($xpath)) ? $this->_xpath = $xpath : array_push($this->_xpath, $xpath);
 		}
 
 		function __destruct() {}
 
 		/**
-		 * Sets the value of _xpath.
+		 * Sets the value of _xpath
 		*/
 		public function _setXpath($xpath){
-			$this->_xpath = $xpath;
+			unset($this->_xpath);
+			$this->_xpath = array();
+			(is_array($xpath)) ? $this->_xpath = $xpath : array_push($this->_xpath, $xpath);
 		}
 
 		/**
@@ -54,57 +58,62 @@
 		 * Used to scrap the page for its title, links, images, videos, iframes and scripts
 		*/
 		public function scrapPage(){
-			$xpath = $this->getXpath();
-
-			$pageLinks = array();
-			$pageImages = array();
-			$pageIframes = array();
-			$pageVideos = array();
-			$pageScripts = array();
+			$xpaths = $this->getXpath();
+			$results = array();
 			
-			$title = $xpath->query('//title');
-			$links = $xpath->query('//a');
-			$images = $xpath->query('//img');
-			$videos = $xpath->query('//video');
-			$iframes = $xpath->query('//iframe');
-			$scripts = $xpath->query("//script");
+			foreach ($xpaths as $xpath) {
+				$pageLinks = array();
+				$pageImages = array();
+				$pageIframes = array();
+				$pageVideos = array();
+				$pageScripts = array();
+				
+				$title = $xpath->query('//title');
+				$links = $xpath->query('//a');
+				$images = $xpath->query('//img');
+				$videos = $xpath->query('//video');
+				$iframes = $xpath->query('//iframe');
+				$scripts = $xpath->query("//script");
 
-			$pageTitle = $title->item(0)->textContent;
-			
-			foreach ($links as $link) {
-				array_push(
-					$pageLinks, 
-					array(
-						"text" => $link->textContent, 
-						"href" => $link->getAttribute('href')
-					)
-				);
+				$pageTitle = $title->item(0)->textContent;
+				
+				foreach ($links as $link) {
+					array_push(
+						$pageLinks, 
+						array(
+							"text" => $link->textContent, 
+							"href" => $link->getAttribute('href')
+						)
+					);
+				}
+
+				foreach ($images as $image) {
+					array_push(
+						$pageImages, 
+						array(
+							"caption" => $image->getAttribute('alt'),
+							"source" => $image->getAttribute('src')
+						)
+					);
+				}
+
+				$pageVideos = $this->getSources($videos);
+				$pageIframes = $this->getSources($iframes);
+				$pageScripts = $this->getSources($scripts);
+
+				$elements = array(
+					"title" => $pageTitle,
+					"images" => $pageImages,
+					"videos" => $pageVideos,
+					"iframes" => $pageIframes,
+					"links" => $pageLinks,
+					"scripts" => $pageScripts
+				);	
+
+				array_push($results, $elements);
 			}
 
-			foreach ($images as $image) {
-				array_push(
-					$pageImages, 
-					array(
-						"caption" => $image->getAttribute('alt'),
-						"source" => $image->getAttribute('src')
-					)
-				);
-			}
-
-			$pageVideos = $this->getSources($videos);
-			$pageIframes = $this->getSources($iframes);
-			$pageScripts = $this->getSources($scripts);
-
-			$elements = array(
-				"title" => $pageTitle,
-				"images" => $pageImages,
-				"videos" => $pageVideos,
-				"iframes" => $pageIframes,
-				"links" => $pageLinks,
-				"scripts" => $pageScripts
-			);
-
-			return json_encode($elements);
+			return json_encode($results);
 		}
 	}
 ?>
