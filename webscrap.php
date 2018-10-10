@@ -7,16 +7,22 @@
 		private $_url;
 
 		function __construct($url) {
-			$this->_url = $url;
+			unset($this->_url);
+			$this->_url = array();
+			(is_array($url)) ? $this->_url = $url : array_push($this->_url, $url);
 			set_error_handler("WebScrap::customErrorHandler");
 		}
 
 		function __destruct() {}
 
+		// sets the value of _url
 		public function setURL($url){
-			$this->_url = $url;
+			unset($this->_url);
+			$this->_url = array();
+			(is_array($url)) ? $this->_url = $url : array_push($this->_url, $url);
 		}
 
+		// gets the value of _url
 		public function getURL(){
 			return $this->_url;
 		}
@@ -30,63 +36,92 @@
 
 		// This function will check if the URL is a valid URL
 		private function validateURL(){
-			if (filter_var($this->getURL(), FILTER_VALIDATE_URL)){
-				return $this->getURL();
-			} else{
-				trigger_error("Error: Invalid URL");
+			$urls = array();
+			foreach ($this->getURL() as $url) {
+				if (filter_var($url, FILTER_VALIDATE_URL)){
+					array_push($urls, $url);
+				} else {
+					trigger_error("Error: " . $url . " is an invalid URL");
+				}
 			}
+			$this->setURL($urls);
+			return $urls;
 		}
 
 		// Initialize cURL and return the result
 		private function initializeCURL(){
-			$url = $this->validateURL();
-
+			$urls = $this->validateURL();
 			// Initialize, execute and close the curl session+
-			$ch = curl_init();
-	        curl_setopt_array(
-	        	$ch, 
-	        	array(
-		            CURLOPT_URL => $url,
-		            CURLOPT_USERAGENT => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36",
-		            CURLOPT_FOLLOWLOCATION => true,
-		            CURLOPT_COOKIESESSION => true,
-		            CURLOPT_RETURNTRANSFER => true,
-		            CURLOPT_SSL_VERIFYPEER => false,
-		            CURLOPT_REFERER => $url,
-		            CURLOPT_VERBOSE => true
-	            )
-	        );
-	        $result = curl_exec($ch);
+			$ch = array();
+			$mh = curl_multi_init();
+			
+			$i = 0;
+			foreach ($urls as $url) {
+				$ch[$i] = curl_init();
+				
+				curl_setopt_array(
+					$ch[$i], 
+					array(
+						CURLOPT_URL => $url,
+						CURLOPT_USERAGENT => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36",
+						CURLOPT_FOLLOWLOCATION => true,
+						CURLOPT_COOKIESESSION => true,
+						CURLOPT_RETURNTRANSFER => true,
+						CURLOPT_SSL_VERIFYPEER => false,
+						CURLOPT_REFERER => $url,
+						CURLOPT_VERBOSE => true
+					)
+				);
 
-			// Check if curl returns an invalid result and throw an error if any
-			if (curl_errno($ch)) { 
-		        curl_close($ch);
-		        trigger_error((string)curl_error($ch));
-			} elseif (trim($result) == "") {
-		        curl_close($ch);
-		        trigger_error("Empty String Returned From cURL");
-			} else {
-		        curl_close($ch); 
-				return $result;
+				curl_multi_add_handle($mh, $ch[$i]);
+
+				$i++;
 			}
+
+			$active = null;
+
+			do {
+				curl_multi_exec($mh, $active);
+			} while ($active);
+
+			$webpages = array();
+
+			$a = 0;
+			foreach ($ch as $ch) {
+				$webpages[$a] = curl_multi_getcontent($ch);
+				curl_multi_remove_handle($mh, $ch);
+				$a++;
+			}
+
+			curl_multi_close($mh);
+
+			return $webpages;
 		}
 
 		// Create a DOMDocument and store the curl output in it
 		public function createDOMDocument(){
-			$webPage = $this->initializeCURL();
-			if ($webPage == FALSE){
-				trigger_error("Invalid webpage");
-			} else {
-				$doc = new \DOMDocument();
-				libxml_use_internal_errors(true);
-				$doc->loadHTML($webPage);
-				return $doc;
+			$webPages = $this->initializeCURL();
+			$documents = array();
+			foreach ($webPages as $webPage) {
+				if ($webPage == FALSE){
+					trigger_error("Invalid webpage");
+				} else {
+					$doc = new \DOMDocument();
+					libxml_use_internal_errors(true);
+					$doc->loadHTML($webPage);
+					array_push($documents, $doc);
+				}
 			}
+			return $documents;
 		}
 
 		//Create a DOMXpath and store the DOMDocument in it.
 		public function createDOMXpath(){
-			return new \DOMXpath($this->createDOMDocument());
+			$xpath = array();
+			foreach ($this->createDOMDocument() as $dom) {
+				array_push($xpath, new \DOMXpath($dom));
+			}
+			return $xpath;
 		}
 	}
 ?>
