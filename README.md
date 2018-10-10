@@ -17,7 +17,18 @@
   <?php
     ...
     //Parse the URL as the parameter in the constructor
-    $webpage = new WebScrap("https://www.github.com"); 
+    $webpage = new WebScrap("https://www.github.com");
+    ...
+  ?>
+```
+
+Or pass an array of urls.
+```
+  <?php
+    ...
+    //Parse an array of URL's as the parameter in the constructor
+    $urls = array("https://www.github.com", "https://www.bing.com", "https://www.outlook.com", "https://www.linkedin.com")
+    $webpage = new WebScrap($urls);
     ...
   ?>
 ```
@@ -26,10 +37,10 @@
 ```
   <?php
     ...
-    //returns a dom document
+    //returns an array with value(s) of type dom document
     $domDoc = $webpage->createDOMDocument(); 
     
-    //returns a dom xpath
+    //returns an array with value(s) of type dom xpath
     $domXPath = $webpage->createDOMXpath(); 
     ...
   ?>
@@ -58,7 +69,7 @@ This class must be used after webscrapper.php has been used and the domXPath has
 ```
   <?php
     ...
-    // returns an array of the pages images, links, videos, iframes, scripts and title
+    // returns an array of the pages images, links, videos, iframes, scripts and title for each domXPath provied
     $elements = $analyzer->scrapPage();
     ...
   ?>
